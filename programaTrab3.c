@@ -194,6 +194,9 @@ void setRemovidoReg(FILE *arquivoBIN, int pos);
 	Funcao que vai ate o registro com byteoffset "pos" e preenche este com '@', apos uma remocao 
 */
 void preencheComArroba (FILE *arquivoBIN, int pos);
+void ordenarRegistros(FILE *arquivoBIN, Reg_Dados *vetReg, FILE *arquivoBINsaida, Reg_Dados *rdados, int *erro);
+void MS_sort(void *vector, unsigned long n, size_t memsize, int (*fcmp)(const void *, const void *));
+int comparaRegistros(const void *A, const void *B);
 void scan_quote_string(char *str);
 void trim(char *str);
 void binarioNaTela1(FILE *ponteiroArquivoBinario);
@@ -201,11 +204,12 @@ void binarioNaTela1(FILE *ponteiroArquivoBinario);
 int main(int argc, char const *argv[]){
 	/* variaveis que serao definidas pelo usuario
 		> func - numero da funcionalidade escolhida
-		> filename - string que armazena nome do arquivo a ser aberto
+		> filename1 - string que armazena nome do arquivo a ser aberto
 		> n - numero de vezes que certas funcoes devem ser executadas
 	*/
 	int func;
-	char *filename = malloc (40*sizeof(char));
+	char *filename1 = malloc (40*sizeof(char));
+	char *filename2 = malloc (40*sizeof(char));
 	int n;
 	scanf("%d", &func);
 	/* definicao das estruturas usadas durante a aplicacao:
@@ -220,6 +224,7 @@ int main(int argc, char const *argv[]){
 	*/
 	FILE *arquivoCSV;
 	FILE *arquivoBIN;
+	FILE *arquivoBINsaida;
 	Pagina_Disco *paginas = malloc (sizeof(Pagina_Disco));
 	Reg_Cabecalho *rcabecalho = malloc (sizeof(Reg_Cabecalho)); 
 	Reg_Dados *rdados = malloc (sizeof(Reg_Dados));
@@ -251,11 +256,15 @@ int main(int argc, char const *argv[]){
 	char *valorBusca = malloc (40*sizeof(char));
 	char *campoAtualiza = malloc (40*sizeof(char));
 	char *valorAtualiza = malloc (150*sizeof(char));
+	/* func7
+		> vetorRegistros - vetor que armazena os registros durante a ordenacao
+	*/
+	Reg_Dados vetReg[10000];
 	// bloco que encaminha o programa para a funcionalidade escolhida e abre os arquivos da maneira necessaria
 	if (func == 1){
-		scanf("%s", filename);
-		trim(filename);
-		arquivoCSV = fopen(filename, "r");
+		scanf("%s", filename1);
+		trim(filename1);
+		arquivoCSV = fopen(filename1, "r");
 		if (arquivoCSV == NULL){
 			printf("Falha no carregamento do arquivo CSV.\n");
 			return 0;
@@ -269,26 +278,26 @@ int main(int argc, char const *argv[]){
 		printf("arquivoTrab1.bin");
 		fclose(arquivoCSV);
 	}else if (func == 2){
-		scanf("%s", filename);
-		trim(filename);
-		arquivoBIN = fopen(filename, "rb");
+		scanf("%s", filename1);
+		trim(filename1);
+		arquivoBIN = fopen(filename1, "rb");
 		if (arquivoBIN == NULL){
 			printf("Falha no processamento do arquivo.\n");
 			return 0;
 		}
 		imprimirRegistrosBIN(&contpagdisco, arquivoBIN, rdados, &pdisco_acessadas);
 	}else if (func == 3){
-		scanf("%s %s %s", filename, nomeCampo, valorCampo);
+		scanf("%s %s %s", filename1, nomeCampo, valorCampo);
 		trim(valorCampo);
-		arquivoBIN = fopen(filename, "rb");
+		arquivoBIN = fopen(filename1, "rb");
 		if (arquivoBIN == NULL){
 			printf("Falha no processamento do arquivo.\n");
 			return 0;
 		}
 		buscaRegistrosBIN(&contpagdisco, arquivoBIN, rdados, nomeCampo, valorCampo, rcabecalho, &pdisco_acessadas);
 	}else if (func == 4){
-		scanf("%s %d", filename, &n);
-		arquivoBIN = fopen(filename, "rb+");
+		scanf("%s %d", filename1, &n);
+		arquivoBIN = fopen(filename1, "rb+");
 		if (arquivoBIN == NULL){
 			printf("Falha no processamento do arquivo.\n");
 			return 0;
@@ -300,8 +309,8 @@ int main(int argc, char const *argv[]){
 		}
 		if (!erro) binarioNaTela1(arquivoBIN);
 	}else if (func == 5){
-		scanf("%s %d", filename, &n);
-		arquivoBIN = fopen(filename, "rb+");
+		scanf("%s %d", filename1, &n);
+		arquivoBIN = fopen(filename1, "rb+");
 		if (arquivoBIN == NULL){
 			printf("Falha no processamento do arquivo.\n");
 			return 0;
@@ -354,8 +363,8 @@ int main(int argc, char const *argv[]){
 		}
 		if (!erro) binarioNaTela1(arquivoBIN);
 	}else if(func == 6){
-		scanf("%s %d", filename, &n);
-		arquivoBIN = fopen(filename, "rb+");
+		scanf("%s %d", filename1, &n);
+		arquivoBIN = fopen(filename1, "rb+");
 		if (arquivoBIN == NULL){
 			printf("Falha no processamento do arquivo.\n");
 			return 0;
@@ -368,10 +377,21 @@ int main(int argc, char const *argv[]){
 			atualizaRegistro(arquivoBIN, rdados, campoBusca, valorBusca, campoAtualiza, valorAtualiza, &erro);
 		}
 		if (!erro) binarioNaTela1(arquivoBIN);
+	}else if(func == 7){
+		scanf("%s", filename1);
+		scan_quote_string(filename2);
+		arquivoBIN = fopen(filename1, "rb+");
+		arquivoBINsaida = fopen(filename2, "wb+");
+		if (arquivoBIN == NULL || arquivoBINsaida == NULL){
+			printf("Falha no processamento do arquivo.\n");
+			return 0;
+		}
+		ordenarRegistros(arquivoBIN, vetReg, arquivoBINsaida, rdados, &erro);
+		if (!erro) binarioNaTela1(arquivoBINsaida);
 	}else if (func == 99){
-		scanf("%s", filename);
-		trim(filename);
-		arquivoBIN = fopen(filename, "rb");
+		scanf("%s", filename1);
+		trim(filename1);
+		arquivoBIN = fopen(filename1, "rb");
 		if (arquivoBIN == NULL){
 			printf("Falha no processamento do arquivo.\n");
 			return 0;
@@ -379,7 +399,7 @@ int main(int argc, char const *argv[]){
 		imprimeListaRemovidos(arquivoBIN, rdados);
 	}
 	fclose(arquivoBIN);
-	free(filename);
+	free(filename1);
 	free(nomeCampo);
 	free(valorCampo);
 	free(rcabecalho);
@@ -1530,6 +1550,79 @@ void preencheComArroba (FILE *arquivoBIN, int pos){
 	fseek(arquivoBIN, (pos+13), SEEK_SET);
 	fwrite(arroba, sizeof(char), tam, arquivoBIN);
 	return;
+}
+// FUNCIONALIDADE 7
+void ordenarRegistros(FILE *arquivoBIN, Reg_Dados *vetReg, FILE *arquivoBINsaida, Reg_Dados *rdados, int *erro){
+	// antes de tudo, checamos se o arquivo binario pode ser lido (ou seja, esta consistente, status = 1)
+	if (!testeEhConsistente(arquivoBIN)){
+		printf("Falha no processamento do arquivo.\n");
+		*erro = 1;
+		return;
+	}
+	// ignoramos a primeira pagina de disco (que so possui o registro de cabecalho)
+	fseek(arquivoBIN, 32000, SEEK_SET);
+	// lemos todo o arquivoBIN, registro por registro
+	// criamos, assim, a lista de todos os registros dentro da RAM
+	int i = 0;
+	while (lerRegistroPre(arquivoBIN, rdados)){
+		// pula lixo
+		while(fgetc(arquivoBIN) == '@'){
+		}
+		if(!feof(arquivoBIN))
+			fseek(arquivoBIN, ftell(arquivoBIN)-1, SEEK_SET);
+		// ignoramos registros removidos
+		if (rdados->removido == '*')
+			continue;
+		vetReg[i].removido = rdados->removido;
+		vetReg[i].encadeamentoLista = rdados->encadeamentoLista;
+		vetReg[i].idServidor = rdados->idServidor;
+		vetReg[i].salarioServidor = rdados->salarioServidor;
+		strcpy(vetReg[i].telefoneServidor,rdados->telefoneServidor);				
+		vetReg[i].tamNomeServidor = rdados->tamNomeServidor;
+		strcpy(vetReg[i].nomeServidor,rdados->nomeServidor);
+		vetReg[i].tamCargoServidor = rdados->tamCargoServidor;
+		strcpy(vetReg[i].cargoServidor,rdados->cargoServidor);
+		vetReg[i].tamanhoRegistro = 8 + 4 + 8 + 14 + 4 + vetReg[i].tamNomeServidor + 4 + vetReg[i].tamCargoServidor;
+		// os registros sao sempre limpados, a fim de que informacoes de registros antigos nao sejam impressas
+		limpaRegistro(rdados);
+		i++;
+	}
+	MS_sort(vetReg, i, sizeof(Reg_Dados), comparaRegistros);
+	
+}
+int comparaRegistros(const void *A, const void *B) {
+    Reg_Dados *rA, *rB;
+    rA = (Reg_Dados*) A;
+    rB = (Reg_Dados*) B;
+    return (rB->idServidor) - (rA->idServidor);
+}
+void MS_sort(void *vector, unsigned long n, size_t memsize, int (*fcmp)(const void *, const void *)) {
+	unsigned long middle, rN, j, k;
+	void *aux, *r;
+
+	if(n < 2) {
+		return;
+	}
+
+	middle = (n / 2);
+	r = vector + middle * memsize;
+	rN = n - middle;
+	MS_sort(vector, middle, memsize, fcmp);
+	MS_sort(r, rN, memsize, fcmp);
+
+	aux = (void *) malloc(memsize * n);
+	j = k = 0;
+	while(j + k < n) {
+		if(k >= rN || (j < middle && fcmp(vector + memsize * j, r + memsize * k) >= 0)) {
+			memcpy(aux + memsize * (j + k), vector + memsize * j, memsize);
+			j++;
+		} else {
+			memcpy(aux + memsize * (j + k), r + memsize * k, memsize);
+			k++;
+		}
+	}
+	memcpy(vector, aux, memsize * n);
+	free(aux);
 }
 // FUNCOES MATHEUS
 void scan_quote_string(char *str) {

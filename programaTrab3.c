@@ -1,6 +1,7 @@
 /* TRAB3 
 	- FUNC7
 		> ordenar pelo campo idServidor
+		> nao conter registros removidos no arquivo saida
 		> 
 	- FUNC8
 	- FUNC9

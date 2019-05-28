@@ -1538,8 +1538,8 @@ int getTamanhoRegistro(FILE *arquivoBIN, int pos){
 }
 void setTamanhoRegistro(FILE *arquivoBIN, int pos, int delta){
 	// vamos ate a pos, pulamos 1 (removido)
-	fseek(arquivoBIN, (pos+1), SEEK_SET);
 	int tamanhoRegistro = getTamanhoRegistro(arquivoBIN, pos) + delta;
+	fseek(arquivoBIN, (pos+1), SEEK_SET);
 	fwrite(&(tamanhoRegistro), sizeof(int), 1, arquivoBIN);
 	return;
 }
@@ -1589,12 +1589,24 @@ void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaid
 		vetReg[i]->encadeamentoLista = rdados->encadeamentoLista;
 		vetReg[i]->idServidor = rdados->idServidor;
 		vetReg[i]->salarioServidor = rdados->salarioServidor;
-		strcpy(vetReg[i]->telefoneServidor,rdados->telefoneServidor);				
+		if (strlen(rdados->telefoneServidor) > 0)
+			strncpy(vetReg[i]->telefoneServidor,rdados->telefoneServidor,14);				
+		else{
+			vetReg[i]->telefoneServidor[0] = '\0';
+			for (int j = 1; j < 14; j++)
+				vetReg[i]->telefoneServidor[j] = '@';
+		}
 		vetReg[i]->tamNomeServidor = rdados->tamNomeServidor;
 		strcpy(vetReg[i]->nomeServidor,rdados->nomeServidor);
 		vetReg[i]->tamCargoServidor = rdados->tamCargoServidor;
 		strcpy(vetReg[i]->cargoServidor,rdados->cargoServidor);
-		vetReg[i]->tamanhoRegistro = 8 + 4 + 8 + 14 + 4 + vetReg[i]->tamNomeServidor + 4 + vetReg[i]->tamCargoServidor;
+		vetReg[i]->tamanhoRegistro = 8 + 4 + 8 + 14;
+		if (strlen(vetReg[i]->nomeServidor) > 0){
+			vetReg[i]->tamanhoRegistro += 4 + vetReg[i]->tamNomeServidor;
+		}
+		if (strlen(vetReg[i]->cargoServidor) > 0){
+			vetReg[i]->tamanhoRegistro += 4 + vetReg[i]->tamCargoServidor;
+		}
 		// os registros sao sempre limpados, a fim de que informacoes de registros antigos nao sejam impressas
 		limpaRegistro(rdados);
 		i++;
@@ -1641,8 +1653,6 @@ void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaid
 		escreveVetorBIN(arquivoBINsaida, vetReg[j], paginas, boAnt);	
 		boAnt = boAtual;
 	}
-	/*
-	*/
 }
 void copiaCabecalhoBIN(FILE *arquivoBIN, FILE *arquivoBINsaida){
 	fseek(arquivoBIN, 0, SEEK_SET);

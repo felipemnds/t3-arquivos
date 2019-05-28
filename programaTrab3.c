@@ -1614,7 +1614,6 @@ void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaid
 		printf("%d\n", vetReg[k]->tamanhoRegistro);
 	}
 	// ordenamos o vetor de registros
-	printf("Vai entrar no printf\n");
 	MS_sort(vetReg, i, sizeof(Reg_Dados*), comparaRegistros);
 	for (int k = 0; k < i; k++){
 		// TESTE
@@ -1630,7 +1629,6 @@ void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaid
 		printf("%s; ", vetReg[k]->cargoServidor);
 		printf("%d\n", vetReg[k]->tamanhoRegistro);
 	}
-	/*
 	// apos ordenar, inserimos estes registros em um novo arquivo binario
 	copiaCabecalhoBIN(arquivoBIN, arquivoBINsaida);
 	// inicializamos a pagina de disco (considerando que ja passamos pela primeira pagina de disco)
@@ -1643,10 +1641,17 @@ void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaid
 		escreveVetorBIN(arquivoBINsaida, vetReg[j], paginas, boAnt);	
 		boAnt = boAtual;
 	}
+	/*
 	*/
 }
 void copiaCabecalhoBIN(FILE *arquivoBIN, FILE *arquivoBINsaida){
-	fwrite(arquivoBIN, 1, 32000, arquivoBINsaida);
+	fseek(arquivoBIN, 0, SEEK_SET);
+	fseek(arquivoBINsaida, 0, SEEK_SET);
+	char c;
+	for (int i = 0; i < 32000; i++){
+		fread(&c, sizeof(char), 1, arquivoBIN);
+		fwrite(&c, sizeof(char), 1, arquivoBINsaida);
+	}
 	return;
 }
 void escreveVetorBIN(FILE *arquivoBIN, Reg_Dados *rdados, Pagina_Disco *paginas, int boAnt){

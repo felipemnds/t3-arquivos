@@ -194,8 +194,10 @@ void setRemovidoReg(FILE *arquivoBIN, int pos);
 	Funcao que vai ate o registro com byteoffset "pos" e preenche este com '@', apos uma remocao 
 */
 void preencheComArroba (FILE *arquivoBIN, int pos);
-void ordenarRegistros(FILE *arquivoBIN, Reg_Dados *vetReg, FILE *arquivoBINsaida, Reg_Dados *rdados, int *erro);
+void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaida, Reg_Dados *rdados, Reg_Cabecalho *Rcabecalho, Pagina_Disco *paginas, int *erro);
 void MS_sort(void *vector, unsigned long n, size_t memsize, int (*fcmp)(const void *, const void *));
+void copiaCabecalhoBIN(FILE *arquivoBIN, FILE *arquivoBINsaida);
+void escreveVetorBIN(FILE *arquivoBIN, Reg_Dados *rdados, Pagina_Disco *paginas, int boAnt);
 int comparaRegistros(const void *A, const void *B);
 void scan_quote_string(char *str);
 void trim(char *str);
@@ -259,7 +261,7 @@ int main(int argc, char const *argv[]){
 	/* func7
 		> vetorRegistros - vetor que armazena os registros durante a ordenacao
 	*/
-	Reg_Dados vetReg[10000];
+	Reg_Dados *vetReg = malloc (10000*sizeof(Reg_Dados));
 	// bloco que encaminha o programa para a funcionalidade escolhida e abre os arquivos da maneira necessaria
 	if (func == 1){
 		scanf("%s", filename1);
@@ -386,8 +388,8 @@ int main(int argc, char const *argv[]){
 			printf("Falha no processamento do arquivo.\n");
 			return 0;
 		}
-		ordenarRegistros(arquivoBIN, vetReg, arquivoBINsaida, rdados, &erro);
-		if (!erro) binarioNaTela1(arquivoBINsaida);
+		ordenarRegistros(arquivoBIN, &vetReg, arquivoBINsaida, rdados, rcabecalho, paginas, &erro);
+		// if (!erro) binarioNaTela1(arquivoBINsaida);
 	}else if (func == 99){
 		scanf("%s", filename1);
 		trim(filename1);
@@ -609,7 +611,7 @@ void lerCabecalhoCSV (FILE *arquivoCSV, FILE *arquivoBIN, Reg_Cabecalho* rcabeca
 		while (buffer != ',' && buffer != '\n'){
 			rcabecalho->campos[i][j] = buffer;
 			buffer = fgetc(arquivoCSV);
-			j++;	
+			j++;
 		}
 		rcabecalho->campos[i][j] = '\0';
 		j = 0;
@@ -1532,6 +1534,13 @@ int getTamanhoRegistro(FILE *arquivoBIN, int pos){
 	fread(&(tamanhoRegistro), sizeof(int), 1, arquivoBIN);
 	return tamanhoRegistro;
 }
+void setTamanhoRegistro(FILE *arquivoBIN, int pos, int delta){
+	// vamos ate a pos, pulamos 1 (removido)
+	fseek(arquivoBIN, (pos+1), SEEK_SET);
+	int tamanhoRegistro = getTamanhoRegistro(arquivoBIN, pos) + delta;
+	fwrite(&(tamanhoRegistro), sizeof(int), 1, arquivoBIN);
+	return;
+}
 void setRemovidoReg(FILE *arquivoBIN, int pos){
 	// vamos ate a pos
 	fseek(arquivoBIN, pos, SEEK_SET);
@@ -1552,7 +1561,7 @@ void preencheComArroba (FILE *arquivoBIN, int pos){
 	return;
 }
 // FUNCIONALIDADE 7
-void ordenarRegistros(FILE *arquivoBIN, Reg_Dados *vetReg, FILE *arquivoBINsaida, Reg_Dados *rdados, int *erro){
+void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaida, Reg_Dados *rdados, Reg_Cabecalho *rcabecalho, Pagina_Disco *paginas, int *erro){
 	// antes de tudo, checamos se o arquivo binario pode ser lido (ou seja, esta consistente, status = 1)
 	if (!testeEhConsistente(arquivoBIN)){
 		printf("Falha no processamento do arquivo.\n");
@@ -1573,22 +1582,137 @@ void ordenarRegistros(FILE *arquivoBIN, Reg_Dados *vetReg, FILE *arquivoBINsaida
 		// ignoramos registros removidos
 		if (rdados->removido == '*')
 			continue;
-		vetReg[i].removido = rdados->removido;
-		vetReg[i].encadeamentoLista = rdados->encadeamentoLista;
-		vetReg[i].idServidor = rdados->idServidor;
-		vetReg[i].salarioServidor = rdados->salarioServidor;
-		strcpy(vetReg[i].telefoneServidor,rdados->telefoneServidor);				
-		vetReg[i].tamNomeServidor = rdados->tamNomeServidor;
-		strcpy(vetReg[i].nomeServidor,rdados->nomeServidor);
-		vetReg[i].tamCargoServidor = rdados->tamCargoServidor;
-		strcpy(vetReg[i].cargoServidor,rdados->cargoServidor);
-		vetReg[i].tamanhoRegistro = 8 + 4 + 8 + 14 + 4 + vetReg[i].tamNomeServidor + 4 + vetReg[i].tamCargoServidor;
+		// inserimos o registro no vetor de registros
+		vetReg[i]->removido = rdados->removido;
+		vetReg[i]->encadeamentoLista = rdados->encadeamentoLista;
+		vetReg[i]->idServidor = rdados->idServidor;
+		vetReg[i]->salarioServidor = rdados->salarioServidor;
+		strcpy(vetReg[i]->telefoneServidor,rdados->telefoneServidor);				
+		vetReg[i]->tamNomeServidor = rdados->tamNomeServidor;
+		strcpy(vetReg[i]->nomeServidor,rdados->nomeServidor);
+		vetReg[i]->tamCargoServidor = rdados->tamCargoServidor;
+		strcpy(vetReg[i]->cargoServidor,rdados->cargoServidor);
+		vetReg[i]->tamanhoRegistro = 8 + 4 + 8 + 14 + 4 + vetReg[i]->tamNomeServidor + 4 + vetReg[i]->tamCargoServidor;
 		// os registros sao sempre limpados, a fim de que informacoes de registros antigos nao sejam impressas
 		limpaRegistro(rdados);
 		i++;
 	}
+	for (int k = 0; k < i; k++){
+		// TESTE
+		printf("\n\tREGISTRO Nº%d pre ord\n", i);
+		printf("%c; ", vetReg[i]->removido);
+		printf("%ld; ", vetReg[i]->encadeamentoLista);
+		printf("%d; ", vetReg[i]->idServidor);
+		printf("%lf; ", vetReg[i]->salarioServidor);
+		printf("%.14s; ", vetReg[i]->telefoneServidor);
+		printf("%d; ", vetReg[i]->tamNomeServidor);
+		printf("%s; ", vetReg[i]->nomeServidor);
+		printf("%d; ", vetReg[i]->tamCargoServidor);
+		printf("%s; ", vetReg[i]->cargoServidor);
+		printf("%d\n", vetReg[i]->tamanhoRegistro);
+	}
+	// ordenamos o vetor de registros
 	MS_sort(vetReg, i, sizeof(Reg_Dados), comparaRegistros);
-	
+	for (int k = 0; k < i; k++){
+		// TESTE
+		printf("\n\tREGISTRO Nº%d pos ord\n", i);
+		printf("%c; ", vetReg[i]->removido);
+		printf("%ld; ", vetReg[i]->encadeamentoLista);
+		printf("%d; ", vetReg[i]->idServidor);
+		printf("%lf; ", vetReg[i]->salarioServidor);
+		printf("%.14s; ", vetReg[i]->telefoneServidor);
+		printf("%d; ", vetReg[i]->tamNomeServidor);
+		printf("%s; ", vetReg[i]->nomeServidor);
+		printf("%d; ", vetReg[i]->tamCargoServidor);
+		printf("%s; ", vetReg[i]->cargoServidor);
+		printf("%d\n", vetReg[i]->tamanhoRegistro);
+	}
+	// apos ordenar, inserimos estes registros em um novo arquivo binario
+	copiaCabecalhoBIN(arquivoBIN, arquivoBINsaida);
+	// inicializamos a pagina de disco (considerando que ja passamos pela primeira pagina de disco)
+	paginas->nPaginas = 1;
+	paginas->k = 0;
+	int boAtual = -1;
+	int boAnt = -1;
+	for (int j = 0; j < i; j++){
+		boAtual = ftell(arquivoBINsaida);
+		escreveVetorBIN(arquivoBINsaida, vetReg[j], paginas, boAnt);	
+		boAnt = boAtual;
+	}
+}
+void copiaCabecalhoBIN(FILE *arquivoBIN, FILE *arquivoBINsaida){
+	fwrite(arquivoBIN, 1, 32000, arquivoBINsaida);
+	return;
+}
+void escreveVetorBIN(FILE *arquivoBIN, Reg_Dados *rdados, Pagina_Disco *paginas, int boAnt){
+	// caso 1 - registro a ser inserido ultrapassa a pagina de disco atual
+	if ((paginas->k + rdados->tamanhoRegistro + 1) >= 32000){
+		int bytes_restantes = 32000 - paginas->k;
+		int deltaNovoTamanho = 0;
+		for (int i = 0; i < bytes_restantes; i++){
+			paginas->pagina[paginas->nPaginas][paginas->k++] = '@';
+			fwrite(&(paginas->pagina[paginas->nPaginas][paginas->k-1]), sizeof(char), 1, arquivoBIN);
+			deltaNovoTamanho += 1;
+		}
+		paginas->k = 0;
+		paginas->nPaginas++;
+		int posBuffer = ftell(arquivoBIN);
+		setTamanhoRegistro(arquivoBIN, boAnt, deltaNovoTamanho);
+		fseek(arquivoBIN, posBuffer, SEEK_SET);
+	}
+	// caso 2 - registro a ser inserido nao ultrapassa a pagina de disco atual
+	// atualiza removido 
+	paginas->pagina[paginas->nPaginas][paginas->k++] = '1';
+	fwrite(&(rdados->removido), sizeof(char), 1, arquivoBIN);
+	// atualiza tamanhoRegistro
+	for (int i = 0; i < 4; i++)
+		paginas->pagina[paginas->nPaginas][paginas->k++] = '1';
+	fwrite(&(rdados->tamanhoRegistro), sizeof(int), 1, arquivoBIN);
+	// atualiza encadeamentoLista
+	for (int i = 0; i < 8; i++)
+		paginas->pagina[paginas->nPaginas][paginas->k++] = '1';
+	fwrite(&(rdados->encadeamentoLista), sizeof(long), 1, arquivoBIN);
+	// atualiza idServidor
+	for (int i = 0; i < 4; i++)
+		paginas->pagina[paginas->nPaginas][paginas->k++] = '1';
+	fwrite(&(rdados->idServidor), sizeof(int), 1, arquivoBIN);
+	// atualiza salarioServidor
+	for (int i = 0; i < 8; i++)
+		paginas->pagina[paginas->nPaginas][paginas->k++] = '1';
+	fwrite(&(rdados->salarioServidor), sizeof(double), 1, arquivoBIN);
+	// atualiza telefoneServidor
+	for (int i = 0; i < 14; i++)
+		paginas->pagina[paginas->nPaginas][paginas->k++] = '1';
+	fwrite(&(rdados->telefoneServidor), sizeof(char), 14, arquivoBIN);
+	if (strlen(rdados->nomeServidor) > 0){
+		// atualiza tamNomeServidor
+		for (int i = 0; i < 4; i++)
+			paginas->pagina[paginas->nPaginas][paginas->k++] = '1';
+		fwrite(&(rdados->tamNomeServidor), sizeof(int), 1, arquivoBIN);
+		// atualiza tagCampo4
+		paginas->pagina[paginas->nPaginas][paginas->k++] = '1';
+		char tagNome = 'n';
+		fwrite(&(tagNome), sizeof(char), 1, arquivoBIN);
+		// atualiza nomeServidor
+		for (int i = 0; i < strlen(rdados->nomeServidor)+1; i++)
+			paginas->pagina[paginas->nPaginas][paginas->k++] = '1';
+		fwrite(rdados->nomeServidor, sizeof(char), strlen(rdados->nomeServidor)+1, arquivoBIN);
+	}
+	if (strlen(rdados->cargoServidor) > 0){
+		// atualiza tamCargoServidor
+		for (int i = 0; i < 4; i++)
+			paginas->pagina[paginas->nPaginas][paginas->k++] = '1';
+		fwrite(&(rdados->tamCargoServidor), sizeof(int), 1, arquivoBIN);
+		// atualiza tagCampo5
+		paginas->pagina[paginas->nPaginas][paginas->k++] = '1';
+		char tagCargo = 'c';
+		fwrite(&(tagCargo), sizeof(char), 1, arquivoBIN);
+		// atualiza cargoServidor
+		for (int i = 0; i < strlen(rdados->cargoServidor)+1; i++)
+			paginas->pagina[paginas->nPaginas][paginas->k++] = '1';
+		fwrite(rdados->cargoServidor, sizeof(char), strlen(rdados->cargoServidor)+1, arquivoBIN);
+	}
+	return;
 }
 int comparaRegistros(const void *A, const void *B) {
     Reg_Dados *rA, *rB;

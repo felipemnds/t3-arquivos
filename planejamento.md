@@ -1,0 +1,31 @@
+FUNC 7
+ - (X) abrir f1 pra leitura
+- (X) abrir f2 pra escrita
+- () criar um vetor de Reg_Dados
+    - () tipo **Reg_Dados, vetor de ponteiros para Reg_Dados
+        - Reg_Dados **vetReg = malloc(100000 * sizeof(Reg_Dados*));
+        - for (int i = 0; i < 100000; i++)
+        -   vetReg[i] = malloc (sizeof(Reg_Dados));
+    - a cara do vetor sera [*RD,*RD,*RD,*RD,*RD]
+    - a cara do elemento sera vetReg[i]
+        - *fazemos isso pois esse elemento é acessado do mesmo jeito que os outros Reg_Dados dos ultimos trabalhos*
+    - a cara dos campos sera vetReg[i]->campo
+- () trazer os registros não removidos de f1 para a RAM (dentro de um vetor)
+    - () ler registro a registro (lerRegistroPre)
+    - () ignorar removidos (if removido = '*', continue)
+    - () caso nao esteja removido, adicionar ao vetor de registros
+        - vetReg[i]->campo = rdados->campo;
+- () ordenar esse vetor de acordo com o campo idServidor
+    - () usar o MS_sort do mateus com ponteiros corretos, etc
+    - () funcao de comparacao que lê o idServidor certo
+        - rX->idServidor;
+- () escrever todos os novos dados no arquivoBIN de saida
+    - () escrever cabecalho (primeira pagnia de disco) no arquivo de saida
+        - () copiar os 32000 primeiros bytes para o arquivo novo
+    - () escrever os registros desse vetor ordenado em um arquivo de saída
+        - () loop de 0 até i (tamanho do vetor)
+        - () escrever cada um
+            - () considerar o caso 1 - ultrapassar uma página de disco
+                - () alterar o tamanho do ultimo registro inserido
+            - () considerar o caso 2 - nao ultrapassar uma página de disco
+                - () insere normalmente

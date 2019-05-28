@@ -261,7 +261,9 @@ int main(int argc, char const *argv[]){
 	/* func7
 		> vetorRegistros - vetor que armazena os registros durante a ordenacao
 	*/
-	Reg_Dados *vetReg = malloc (10000*sizeof(Reg_Dados));
+	Reg_Dados **vetReg = malloc (10000 * sizeof(Reg_Dados*));
+	for (int i = 0; i < 10000; i++)
+		vetReg[i] = malloc (sizeof(Reg_Dados));
 	// bloco que encaminha o programa para a funcionalidade escolhida e abre os arquivos da maneira necessaria
 	if (func == 1){
 		scanf("%s", filename1);
@@ -388,8 +390,8 @@ int main(int argc, char const *argv[]){
 			printf("Falha no processamento do arquivo.\n");
 			return 0;
 		}
-		ordenarRegistros(arquivoBIN, &vetReg, arquivoBINsaida, rdados, rcabecalho, paginas, &erro);
-		// if (!erro) binarioNaTela1(arquivoBINsaida);
+		ordenarRegistros(arquivoBIN, vetReg, arquivoBINsaida, rdados, rcabecalho, paginas, &erro);
+		if (!erro) binarioNaTela1(arquivoBINsaida);
 	}else if (func == 99){
 		scanf("%s", filename1);
 		trim(filename1);
@@ -1599,34 +1601,36 @@ void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaid
 	}
 	for (int k = 0; k < i; k++){
 		// TESTE
-		printf("\n\tREGISTRO Nº%d pre ord\n", i);
-		printf("%c; ", vetReg[i]->removido);
-		printf("%ld; ", vetReg[i]->encadeamentoLista);
-		printf("%d; ", vetReg[i]->idServidor);
-		printf("%lf; ", vetReg[i]->salarioServidor);
-		printf("%.14s; ", vetReg[i]->telefoneServidor);
-		printf("%d; ", vetReg[i]->tamNomeServidor);
-		printf("%s; ", vetReg[i]->nomeServidor);
-		printf("%d; ", vetReg[i]->tamCargoServidor);
-		printf("%s; ", vetReg[i]->cargoServidor);
-		printf("%d\n", vetReg[i]->tamanhoRegistro);
+		printf("\n\tREGISTRO Nº%d pre ord\n", k);
+		printf("%c; ", vetReg[k]->removido);
+		printf("%ld; ", vetReg[k]->encadeamentoLista);
+		printf("%d; ", vetReg[k]->idServidor);
+		printf("%lf; ", vetReg[k]->salarioServidor);
+		printf("%.14s; ", vetReg[k]->telefoneServidor);
+		printf("%d; ", vetReg[k]->tamNomeServidor);
+		printf("%s; ", vetReg[k]->nomeServidor);
+		printf("%d; ", vetReg[k]->tamCargoServidor);
+		printf("%s; ", vetReg[k]->cargoServidor);
+		printf("%d\n", vetReg[k]->tamanhoRegistro);
 	}
 	// ordenamos o vetor de registros
-	MS_sort(vetReg, i, sizeof(Reg_Dados), comparaRegistros);
+	printf("Vai entrar no printf\n");
+	MS_sort(vetReg, i, sizeof(Reg_Dados*), comparaRegistros);
 	for (int k = 0; k < i; k++){
 		// TESTE
-		printf("\n\tREGISTRO Nº%d pos ord\n", i);
-		printf("%c; ", vetReg[i]->removido);
-		printf("%ld; ", vetReg[i]->encadeamentoLista);
-		printf("%d; ", vetReg[i]->idServidor);
-		printf("%lf; ", vetReg[i]->salarioServidor);
-		printf("%.14s; ", vetReg[i]->telefoneServidor);
-		printf("%d; ", vetReg[i]->tamNomeServidor);
-		printf("%s; ", vetReg[i]->nomeServidor);
-		printf("%d; ", vetReg[i]->tamCargoServidor);
-		printf("%s; ", vetReg[i]->cargoServidor);
-		printf("%d\n", vetReg[i]->tamanhoRegistro);
+		printf("\n\tREGISTRO Nº%d pos ord\n", k);
+		printf("%c; ", vetReg[k]->removido);
+		printf("%ld; ", vetReg[k]->encadeamentoLista);
+		printf("%d; ", vetReg[k]->idServidor);
+		printf("%lf; ", vetReg[k]->salarioServidor);
+		printf("%.14s; ", vetReg[k]->telefoneServidor);
+		printf("%d; ", vetReg[k]->tamNomeServidor);
+		printf("%s; ", vetReg[k]->nomeServidor);
+		printf("%d; ", vetReg[k]->tamCargoServidor);
+		printf("%s; ", vetReg[k]->cargoServidor);
+		printf("%d\n", vetReg[k]->tamanhoRegistro);
 	}
+	/*
 	// apos ordenar, inserimos estes registros em um novo arquivo binario
 	copiaCabecalhoBIN(arquivoBIN, arquivoBINsaida);
 	// inicializamos a pagina de disco (considerando que ja passamos pela primeira pagina de disco)
@@ -1639,6 +1643,7 @@ void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaid
 		escreveVetorBIN(arquivoBINsaida, vetReg[j], paginas, boAnt);	
 		boAnt = boAtual;
 	}
+	*/
 }
 void copiaCabecalhoBIN(FILE *arquivoBIN, FILE *arquivoBINsaida){
 	fwrite(arquivoBIN, 1, 32000, arquivoBINsaida);
@@ -1715,10 +1720,10 @@ void escreveVetorBIN(FILE *arquivoBIN, Reg_Dados *rdados, Pagina_Disco *paginas,
 	return;
 }
 int comparaRegistros(const void *A, const void *B) {
-    Reg_Dados *rA, *rB;
-    rA = (Reg_Dados*) A;
-    rB = (Reg_Dados*) B;
-    return (rB->idServidor) - (rA->idServidor);
+    Reg_Dados **rA, **rB;
+    rA = (Reg_Dados**) A;
+    rB = (Reg_Dados**) B;
+    return ((*rB)->idServidor) - ((*rA)->idServidor);
 }
 void MS_sort(void *vector, unsigned long n, size_t memsize, int (*fcmp)(const void *, const void *)) {
 	unsigned long middle, rN, j, k;

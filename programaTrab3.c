@@ -1611,36 +1611,8 @@ void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaid
 		limpaRegistro(rdados);
 		i++;
 	}
-	for (int k = 0; k < i; k++){
-		// TESTE
-		printf("\n\tREGISTRO Nº%d pre ord\n", k);
-		printf("%c; ", vetReg[k]->removido);
-		printf("%ld; ", vetReg[k]->encadeamentoLista);
-		printf("%d; ", vetReg[k]->idServidor);
-		printf("%lf; ", vetReg[k]->salarioServidor);
-		printf("%.14s; ", vetReg[k]->telefoneServidor);
-		printf("%d; ", vetReg[k]->tamNomeServidor);
-		printf("%s; ", vetReg[k]->nomeServidor);
-		printf("%d; ", vetReg[k]->tamCargoServidor);
-		printf("%s; ", vetReg[k]->cargoServidor);
-		printf("%d\n", vetReg[k]->tamanhoRegistro);
-	}
 	// ordenamos o vetor de registros
 	MS_sort(vetReg, i, sizeof(Reg_Dados*), comparaRegistros);
-	for (int k = 0; k < i; k++){
-		// TESTE
-		printf("\n\tREGISTRO Nº%d pos ord\n", k);
-		printf("%c; ", vetReg[k]->removido);
-		printf("%ld; ", vetReg[k]->encadeamentoLista);
-		printf("%d; ", vetReg[k]->idServidor);
-		printf("%lf; ", vetReg[k]->salarioServidor);
-		printf("%.14s; ", vetReg[k]->telefoneServidor);
-		printf("%d; ", vetReg[k]->tamNomeServidor);
-		printf("%s; ", vetReg[k]->nomeServidor);
-		printf("%d; ", vetReg[k]->tamCargoServidor);
-		printf("%s; ", vetReg[k]->cargoServidor);
-		printf("%d\n", vetReg[k]->tamanhoRegistro);
-	}
 	// apos ordenar, inserimos estes registros em um novo arquivo binario
 	copiaCabecalhoBIN(arquivoBIN, arquivoBINsaida);
 	// inicializamos a pagina de disco (considerando que ja passamos pela primeira pagina de disco)
@@ -1648,9 +1620,9 @@ void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaid
 	paginas->k = 0;
 	int boAtual = -1;
 	int boAnt = -1;
-	for (int j = 0; j < i; j++){
+	for (int k = 0; k < i; k++){
 		boAtual = ftell(arquivoBINsaida);
-		escreveVetorBIN(arquivoBINsaida, vetReg[j], paginas, boAnt);	
+		escreveVetorBIN(arquivoBINsaida, vetReg[k], paginas, boAnt);	
 		boAnt = boAtual;
 	}
 }
@@ -1665,10 +1637,11 @@ void copiaCabecalhoBIN(FILE *arquivoBIN, FILE *arquivoBINsaida){
 	return;
 }
 void escreveVetorBIN(FILE *arquivoBIN, Reg_Dados *rdados, Pagina_Disco *paginas, int boAnt){
+	int deltaNovoTamanho = 0;
+	int bytes_restantes = 0;
 	// caso 1 - registro a ser inserido ultrapassa a pagina de disco atual
-	if ((paginas->k + rdados->tamanhoRegistro + 1) >= 32000){
-		int bytes_restantes = 32000 - paginas->k;
-		int deltaNovoTamanho = 0;
+	if ((paginas->k + rdados->tamanhoRegistro + 5 + 1) >= 32000){
+		bytes_restantes = 32000 - paginas->k;
 		for (int i = 0; i < bytes_restantes; i++){
 			paginas->pagina[paginas->nPaginas][paginas->k++] = '@';
 			fwrite(&(paginas->pagina[paginas->nPaginas][paginas->k-1]), sizeof(char), 1, arquivoBIN);

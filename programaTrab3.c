@@ -1539,6 +1539,7 @@ int getTamanhoRegistro(FILE *arquivoBIN, int pos){
 void setTamanhoRegistro(FILE *arquivoBIN, int pos, int delta){
 	// vamos ate a pos, pulamos 1 (removido)
 	int tamanhoRegistro = getTamanhoRegistro(arquivoBIN, pos) + delta;
+	// TESTE FUNC7 printf("Tamanho antigo [%d] e novo [%d]\n", tamanhoRegistro, tamanhoRegistro+delta);
 	fseek(arquivoBIN, (pos+1), SEEK_SET);
 	fwrite(&(tamanhoRegistro), sizeof(int), 1, arquivoBIN);
 	return;
@@ -1611,6 +1612,21 @@ void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaid
 		limpaRegistro(rdados);
 		i++;
 	}
+	/* TESTE FUNC7 
+	for (int k = 0; k < i; k++){
+		printf("\n\tREGISTRO Nº%d pre ord\n", k);
+		printf("%c; ", vetReg[k]->removido);
+		printf("%ld; ", vetReg[k]->encadeamentoLista);
+		printf("%d; ", vetReg[k]->idServidor);
+		printf("%lf; ", vetReg[k]->salarioServidor);
+		printf("%.14s; ", vetReg[k]->telefoneServidor);
+		printf("%d; ", vetReg[k]->tamNomeServidor);
+		printf("%s; ", vetReg[k]->nomeServidor);
+		printf("%d; ", vetReg[k]->tamCargoServidor);
+		printf("%s; ", vetReg[k]->cargoServidor);
+		printf("%d\n", vetReg[k]->tamanhoRegistro);
+	}
+	*/
 	// ordenamos o vetor de registros
 	MS_sort(vetReg, i, sizeof(Reg_Dados*), comparaRegistros);
 	// apos ordenar, inserimos estes registros em um novo arquivo binario
@@ -1621,12 +1637,26 @@ void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaid
 	int boAtual = -1;
 	int boAnt = -1;
 	for (int k = 0; k < i; k++){
+		/* TESTE FUNC7 
+		printf("\n\tREGISTRO Nº%d pos ord\n", k);
+		printf("%c; ", vetReg[k]->removido);
+		printf("%ld; ", vetReg[k]->encadeamentoLista);
+		printf("%d; ", vetReg[k]->idServidor);
+		printf("%lf; ", vetReg[k]->salarioServidor);
+		printf("%.14s; ", vetReg[k]->telefoneServidor);
+		printf("%d; ", vetReg[k]->tamNomeServidor);
+		printf("%s; ", vetReg[k]->nomeServidor);
+		printf("%d; ", vetReg[k]->tamCargoServidor);
+		printf("%s; ", vetReg[k]->cargoServidor);
+		printf("%d\n", vetReg[k]->tamanhoRegistro);
+		*/
 		boAtual = ftell(arquivoBINsaida);
 		escreveVetorBIN(arquivoBINsaida, vetReg[k], paginas, boAnt);	
 		boAnt = boAtual;
 	}
 }
 void copiaCabecalhoBIN(FILE *arquivoBIN, FILE *arquivoBINsaida){
+	setTopoLista(arquivoBIN, -1);
 	fseek(arquivoBIN, 0, SEEK_SET);
 	fseek(arquivoBINsaida, 0, SEEK_SET);
 	char c;
@@ -1639,9 +1669,13 @@ void copiaCabecalhoBIN(FILE *arquivoBIN, FILE *arquivoBINsaida){
 void escreveVetorBIN(FILE *arquivoBIN, Reg_Dados *rdados, Pagina_Disco *paginas, int boAnt){
 	int deltaNovoTamanho = 0;
 	int bytes_restantes = 0;
+	// TESTE FUNC7 printf("Antes, (%d + %d = %d) ultrapassa 32000?\n", paginas->k, rdados->tamanhoRegistro, paginas->k + rdados->tamanhoRegistro);
 	// caso 1 - registro a ser inserido ultrapassa a pagina de disco atual
-	if ((paginas->k + rdados->tamanhoRegistro + 5 + 1) >= 32000){
+	if ((paginas->k + rdados->tamanhoRegistro + 5) > 32000){
+		// TESTE FUNC7 printf("VAI QUEBRAR UMA PAGINA DE DISCO\n");
+		// TESTE FUNC7 printf("Já que (%d + %d) ultrapassa 32000\n", paginas->k, rdados->tamanhoRegistro);
 		bytes_restantes = 32000 - paginas->k;
+		// TESTE FUNC7 printf("Dessa forma, vamos completar com %d '@'\n", bytes_restantes);
 		for (int i = 0; i < bytes_restantes; i++){
 			paginas->pagina[paginas->nPaginas][paginas->k++] = '@';
 			fwrite(&(paginas->pagina[paginas->nPaginas][paginas->k-1]), sizeof(char), 1, arquivoBIN);

@@ -1,7 +1,15 @@
-/* Trabalho 3 - Organização de Arquivos
-	Nomes da dupla:
-	- FELIPE MOREIRA NEVES DE SOUZA - 10734651
-	- BRUNO BALDISSERA CARLOTTO - 10724351
+/*	DESIGN
+	BRUNO BALDISSERA CARLOTTO - 10724351
+*/
+
+/* TRAB3 
+	- FUNC7
+		> ordenar pelo campo idServidor
+		> nao conter registros removidos no arquivo saida
+		> 	
+	- FUNC8
+	- FUNC9
+
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -192,28 +200,15 @@ void setRemovidoReg(FILE *arquivoBIN, int pos);
 	Funcao que vai ate o registro com byteoffset "pos" e preenche este com '@', apos uma remocao 
 */
 void preencheComArroba (FILE *arquivoBIN, int pos);
-/* ordenarRegistros
-	Funcao que guarda registros em um vetor, ordena cada um com base no idServidor, e reescreve em um novo arquivoBIN
-*/
 void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaida, Reg_Dados *rdados, Reg_Cabecalho *Rcabecalho, Pagina_Disco *paginas, int *erro);
 void MS_sort(void *vector, unsigned long n, size_t memsize, int (*fcmp)(const void *, const void *));
-/* copiaCabecalhoBIN
-	Funcao auxiliar à 'ordenarRegistros', que altera o topoLista de um arquivoBIN (considerando que a lista de removidos será ignorada),
-	lê e copia os primeiros 32000 bytes para outro arquivoBIN novo 
-*/
 void copiaCabecalhoBIN(FILE *arquivoBIN, FILE *arquivoBINsaida);
-/* escreveVetorBIN
-	Funcao auxiliar à 'ordenarRegistros', que recebe uma struct do tipo Reg_Dados (vinda de um vetor de registros) e escreve os respectivos campos
-	em um novo arquivoBIN, considerando quebras nas paginas de disco
-*/
 void escreveVetorBIN(FILE *arquivoBIN, Reg_Dados *rdados, Pagina_Disco *paginas, int boAnt);
-/* comparaRegistros
-	Funcao auxiliar à 'MS_sort', que recebe dois elementos do tipo Reg_Dados** e compara ambos através do campo idServidor
-*/
 int comparaRegistros(const void *A, const void *B);
 void scan_quote_string(char *str);
 void trim(char *str);
 void binarioNaTela1(FILE *ponteiroArquivoBinario);
+
 /* merging
 	Funcao que recebe dois arquivos como entrada e produz um arquivo de saida. O arquivo de saida
 	e composto por todos os registros nao repetidos de ambas as entradas, de forma a coalescer os dados.
@@ -414,20 +409,23 @@ int main(int argc, char const *argv[]){
 			printf("Falha no processamento do arquivo.\n");
 			return 0;
 		}
-		ordenarRegistros(arquivoBIN, vetReg, arquivoBINsaida, rdados, rcabecalho, paginas, &erro);	
+		ordenarRegistros(arquivoBIN, vetReg, arquivoBINsaida, rdados, rcabecalho, paginas, &erro);
 		if (!erro) binarioNaTela1(arquivoBINsaida);
 	}else if (func == 8){
 		scanf("%s", filename1);
 		trim(filename1);
+		printf("arquivo1: %s\n", filename1);
 		arquivoBIN = fopen(filename1, "rb+");
 
 		scanf(" %s", filename2);
 		trim(filename2);
+		printf("arquivo2: %s\n", filename2);
 		FILE *arquivoBIN2 = fopen(filename2, "rb+");
 
 		char *filename3 = malloc (40*sizeof(char));
 		scanf(" %s", filename3);
 		trim(filename3);
+		printf("arquivo3: %s\n", filename3);		
 		arquivoBINsaida = fopen(filename3, "wb+");
 
 		if (arquivoBIN == NULL || arquivoBIN2 == NULL){
@@ -479,15 +477,18 @@ int main(int argc, char const *argv[]){
 	}else if (func == 9){
 		scanf("%s", filename1);
 		trim(filename1);
+		printf("arquivo1: %s\n", filename1);
 		arquivoBIN = fopen(filename1, "rb+");
 
 		scanf(" %s", filename2);
 		trim(filename2);
+		printf("arquivo2: %s\n", filename2);
 		FILE *arquivoBIN2 = fopen(filename2, "rb+");
 
 		char *filename3 = malloc (40*sizeof(char));
 		scanf(" %s", filename3);
 		trim(filename3);
+		printf("arquivo3: %s\n", filename3);		
 		arquivoBINsaida = fopen(filename3, "wb+");
 
 		if (arquivoBIN == NULL || arquivoBIN2 == NULL){
@@ -1302,7 +1303,8 @@ void removeRegistro(FILE *arquivoBIN, Reg_Dados *rdados, char *nomeCampo, char *
 			flag_encontrou = 0;
 		}
 		// os registros sao sempre limpados, a fim de que informacoes de registros antigos nao sejam reutiilizadas
-		limpaRegistro(rdados);
+		free(rdados);
+		rdados = (Reg_Dados*) malloc(sizeof(Reg_Dados));
 	}
 	setStatus(arquivoBIN, '1');
 	return;
@@ -1755,24 +1757,50 @@ void ordenarRegistros(FILE *arquivoBIN, Reg_Dados **vetReg, FILE *arquivoBINsaid
 		limpaRegistro(rdados);
 		i++;
 	}
+	for (int k = 0; k < i; k++){
+		// TESTE
+		printf("\n\tREGISTRO Nº%d pre ord\n", k);
+		printf("%c; ", vetReg[k]->removido);
+		printf("%ld; ", vetReg[k]->encadeamentoLista);
+		printf("%d; ", vetReg[k]->idServidor);
+		printf("%lf; ", vetReg[k]->salarioServidor);
+		printf("%.14s; ", vetReg[k]->telefoneServidor);
+		printf("%d; ", vetReg[k]->tamNomeServidor);
+		printf("%s; ", vetReg[k]->nomeServidor);
+		printf("%d; ", vetReg[k]->tamCargoServidor);
+		printf("%s; ", vetReg[k]->cargoServidor);
+		printf("%d\n", vetReg[k]->tamanhoRegistro);
+	}
 	// ordenamos o vetor de registros
 	MS_sort(vetReg, i, sizeof(Reg_Dados*), comparaRegistros);
+	for (int k = 0; k < i; k++){
+		// TESTE
+		printf("\n\tREGISTRO Nº%d pos ord\n", k);
+		printf("%c; ", vetReg[k]->removido);
+		printf("%ld; ", vetReg[k]->encadeamentoLista);
+		printf("%d; ", vetReg[k]->idServidor);
+		printf("%lf; ", vetReg[k]->salarioServidor);
+		printf("%.14s; ", vetReg[k]->telefoneServidor);
+		printf("%d; ", vetReg[k]->tamNomeServidor);
+		printf("%s; ", vetReg[k]->nomeServidor);
+		printf("%d; ", vetReg[k]->tamCargoServidor);
+		printf("%s; ", vetReg[k]->cargoServidor);
+		printf("%d\n", vetReg[k]->tamanhoRegistro);
+	}
 	// apos ordenar, inserimos estes registros em um novo arquivo binario
 	copiaCabecalhoBIN(arquivoBIN, arquivoBINsaida);
 	// inicializamos a pagina de disco (considerando que ja passamos pela primeira pagina de disco)
 	paginas->nPaginas = 1;
 	paginas->k = 0;
-	// inicializamos os byteOffset's atual/anterior (variaveis que nos ajudarão na mudanca de tamanhoRegistro durante a quebra de paginas de disco)
 	int boAtual = -1;
 	int boAnt = -1;
-	for (int k = 0; k < i; k++){
+	for (int j = 0; j < i; j++){
 		boAtual = ftell(arquivoBINsaida);
-		escreveVetorBIN(arquivoBINsaida, vetReg[k], paginas, boAnt);	
+		escreveVetorBIN(arquivoBINsaida, vetReg[j], paginas, boAnt);	
 		boAnt = boAtual;
 	}
 }
 void copiaCabecalhoBIN(FILE *arquivoBIN, FILE *arquivoBINsaida){
-	setTopoLista(arquivoBIN, -1);
 	fseek(arquivoBIN, 0, SEEK_SET);
 	fseek(arquivoBINsaida, 0, SEEK_SET);
 	char c;
@@ -1783,11 +1811,10 @@ void copiaCabecalhoBIN(FILE *arquivoBIN, FILE *arquivoBINsaida){
 	return;
 }
 void escreveVetorBIN(FILE *arquivoBIN, Reg_Dados *rdados, Pagina_Disco *paginas, int boAnt){
-	int deltaNovoTamanho = 0;
-	int bytes_restantes = 0;
 	// caso 1 - registro a ser inserido ultrapassa a pagina de disco atual
-	if ((paginas->k + rdados->tamanhoRegistro + 5) > 32000){
-		bytes_restantes = 32000 - paginas->k;
+	if ((paginas->k + rdados->tamanhoRegistro + 1) >= 32000){
+		int bytes_restantes = 32000 - paginas->k;
+		int deltaNovoTamanho = 0;
 		for (int i = 0; i < bytes_restantes; i++){
 			paginas->pagina[paginas->nPaginas][paginas->k++] = '@';
 			fwrite(&(paginas->pagina[paginas->nPaginas][paginas->k-1]), sizeof(char), 1, arquivoBIN);
@@ -1859,7 +1886,6 @@ int comparaRegistros(const void *A, const void *B) {
     rB = (Reg_Dados**) B;
     return ((*rB)->idServidor) - ((*rA)->idServidor);
 }
-// FUNCOES MATHEUS
 void MS_sort(void *vector, unsigned long n, size_t memsize, int (*fcmp)(const void *, const void *)) {
 	unsigned long middle, rN, j, k;
 	void *aux, *r;
@@ -1889,6 +1915,7 @@ void MS_sort(void *vector, unsigned long n, size_t memsize, int (*fcmp)(const vo
 	free(aux);
 }
 // FUNCIONALIDADE 8
+
 //funcao muito similar a "lerRegistroPre", porem com algumas modificacoes para atender melhor as funcionalidades 8 e 9
 int lerProxRegistro(FILE *arquivoBIN, Reg_Dados *rdados, int* ultimoReg, int* pulaReg){
 	// le removido
@@ -1912,6 +1939,7 @@ int lerProxRegistro(FILE *arquivoBIN, Reg_Dados *rdados, int* ultimoReg, int* pu
 	if (DEBUG) printf("id lido: %d\n", rdados->idServidor);
 	if (feof(arquivoBIN))
 		return 0;
+	// printf("%d", rdados->idServidor);
 	// le salarioServidor
 	fread(&(rdados->salarioServidor), sizeof(double), 1, arquivoBIN);
 	if (DEBUG) printf("salario lido: %lf\n", rdados->salarioServidor);
